@@ -34,7 +34,7 @@
 
 #define LOCATION_LAT 43.023311
 #define LOCATION_LONG -81.237548
-#define LOCATION_TOLERANCE 1000
+#define LOCATION_TOLERANCE 100
 
 #define STRINGIFY(str) #str
 #define STRING(str) STRINGIFY(str)
@@ -61,6 +61,7 @@ void setup()
 
   // Enable serial
   Serial.begin(9600);
+  Serial.println("Initialised.");
 
   // Set up LCD
   lcd.begin(16, 2);
@@ -104,6 +105,7 @@ void loop()
   {
     // unlock the box
     setLcd("Backdoor!", "Unlocking...");
+    EEPROM.write(EEPROM_ATTEMPTS, 0);
     Serial.print("Key1");
     Serial.println(key1);
     Serial.print("Key2");
@@ -153,6 +155,12 @@ void loop()
 
         // Display congradulations
         setLcd("Congratulations!", "  Open the box  ");
+        Serial.print("Latitude: ");
+        Serial.println(lat);
+        Serial.print("Longitude: ");
+        Serial.println(lon);
+        Serial.print("Distance: ");
+        Serial.println(distance);
       }
       else
       {
@@ -161,12 +169,12 @@ void loop()
 
         if(distance < 1000)
         {
-          lcd.print((int)(distance / 1000));
+          lcd.print(abs((int)(distance / 1000)));
           lcd.print("km");
         }
         else
         {
-          lcd.print((int)distance);
+          lcd.print(abs((int)distance));
           lcd.print("m");
         }
       }
@@ -198,6 +206,8 @@ bool within(int val, int target, int tolerance)
 {
   return val < target + tolerance && val > target - tolerance;
 }
+
+
 
 
 
