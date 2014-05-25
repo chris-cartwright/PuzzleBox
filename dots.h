@@ -30,7 +30,7 @@ public:
       return;
     }
     
-    if(millis() % 250 != 0)
+    if(millis() % 1000 != 0)
     {
       return;
     }

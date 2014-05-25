@@ -113,7 +113,7 @@ void loop()
     delay(5000);
     digitalWrite(PIN_SHUTDOWN, HIGH);
   }
-  
+
   if(within(key1, LOCK_VOLT_2, 20) && within(key2, LOCK_VOLT_1, 20))
   {
     // Lock the box
@@ -142,7 +142,7 @@ void loop()
     if(age != TinyGPS::GPS_INVALID_AGE)
     {
       dots.running(false);
-      
+
       // Calculate distance from here to target
       float distance = TinyGPS::distance_between(lat, lon, LOCATION_LAT, LOCATION_LONG);
 
@@ -198,5 +198,7 @@ bool within(int val, int target, int tolerance)
 {
   return val < target + tolerance && val > target - tolerance;
 }
+
+
 
 
