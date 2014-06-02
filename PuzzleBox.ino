@@ -8,7 +8,7 @@
 #define PIN_SERVO_POWER 12
 #define PIN_SERVO_POSITION 10
 
-#define PIN_SHUTDOWN 13
+#define PIN_SHUTDOWN 11
 
 #define PIN_LCD_RS 2
 #define PIN_LCD_RW 3
@@ -47,14 +47,17 @@ Dots dots(&lcd);
 
 void setup()
 {
+  // Need to make sure power to this pin is killed immediately
+  // Otherwise, the box will turn itself off again
+  pinMode(PIN_SHUTDOWN, OUTPUT);
+  digitalWrite(PIN_SHUTDOWN, LOW);
+    
   // Set up pins
   pinMode(PIN_SERVO_POWER, OUTPUT);
   pinMode(PIN_SERVO_POSITION, OUTPUT);
-  pinMode(PIN_SHUTDOWN, OUTPUT);
   pinMode(PIN_LCD_BL, OUTPUT);
 
   digitalWrite(PIN_SERVO_POWER, HIGH);
-  digitalWrite(PIN_SHUTDOWN, LOW);
 
   servo.attach(PIN_SERVO_POSITION);
   servo.write(SERVO_LOCK);
@@ -68,36 +71,7 @@ void setup()
   analogWrite(PIN_LCD_BL, 255);
   //bl.attach(PIN_LCD_BL);
   //bl.write(1000);
-
-  // Read and increment attempt counter
-  unsigned char attempts = EEPROM.read(EEPROM_ATTEMPTS);
-  attempts++;
-
-  if(attempts >= MAX_ATTEMPTS)
-  {
-    setLcd("Maximum number", "of attempts!");
-    delay(5000);
-    digitalWrite(PIN_SHUTDOWN, HIGH);
-  }
-
-  EEPROM.write(EEPROM_ATTEMPTS, attempts);
-
-  // Display 'Welcome'
-  setLcd("    Welcome!    ", "");
-  lcd.print("Attempt ");
-  lcd.print(attempts);
-  lcd.print(" of " STRING(MAX_ATTEMPTS));
-  delay(5000);
-  lcd.clear();
-
-  // Display 'Searching for signal...'
-  setLcd("Searching for", "signal");
-  dots.location(7, 2);
-  dots.running(true);
-}
-
-void loop()
-{
+  
   // Check to see if unlock circuit is hooked up
   int key1 = analogRead(PIN_LOCK_1);
   int key2 = analogRead(PIN_LOCK_2);
@@ -130,6 +104,35 @@ void loop()
     digitalWrite(PIN_SHUTDOWN, HIGH);
   }
 
+  // Read and increment attempt counter
+  unsigned char attempts = EEPROM.read(EEPROM_ATTEMPTS);
+  attempts++;
+
+  if(attempts >= MAX_ATTEMPTS)
+  {
+    setLcd("Maximum number", "of attempts!");
+    delay(5000);
+    digitalWrite(PIN_SHUTDOWN, HIGH);
+  }
+
+  EEPROM.write(EEPROM_ATTEMPTS, attempts);
+
+  // Display 'Welcome'
+  setLcd("    Welcome!    ", "");
+  lcd.print("Attempt ");
+  lcd.print(attempts);
+  lcd.print(" of " STRING(MAX_ATTEMPTS));
+  delay(5000);
+  lcd.clear();
+
+  // Display 'Searching for signal...'
+  setLcd("Searching for", "signal");
+  dots.location(7, 2);
+  dots.running(true);
+}
+
+void loop()
+{
   dots.tick();
 
   // Pump serial data into TinyGPS
