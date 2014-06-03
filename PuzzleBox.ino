@@ -1,5 +1,5 @@
-
 #include <EEPROM.h>
+#include <EEPROMAnything.h>
 #include <LiquidCrystal.h>
 #include <TinyGPS.h>
 #include <PWMServo.h>
@@ -9,6 +9,8 @@
 #define PIN_SERVO_POSITION 10
 
 #define PIN_SHUTDOWN 11
+
+#define PIN_SET_LOCATION 5
 
 #define PIN_LCD_RS 2
 #define PIN_LCD_RW 3
@@ -30,20 +32,27 @@
 
 #define EEPROM_ATTEMPTS 0
 
+#define EEPROM_LOCATION 10
+
 #define MAX_ATTEMPTS 50
 
-#define LOCATION_LAT 43.023311
-#define LOCATION_LONG -81.237548
 #define LOCATION_TOLERANCE 100
 
 #define STRINGIFY(str) #str
 #define STRING(str) STRINGIFY(str)
+
+struct Location {
+  float lat;
+  float lon;
+} 
+loc;
 
 PWMServo servo;
 PWMServo bl;
 LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_RW, PIN_LCD_EN, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
 TinyGPS gps;
 Dots dots(&lcd);
+bool setLoc = false;
 
 void setup()
 {
@@ -51,7 +60,7 @@ void setup()
   // Otherwise, the box will turn itself off again
   pinMode(PIN_SHUTDOWN, OUTPUT);
   digitalWrite(PIN_SHUTDOWN, LOW);
-    
+
   // Set up pins
   pinMode(PIN_SERVO_POWER, OUTPUT);
   pinMode(PIN_SERVO_POSITION, OUTPUT);
@@ -71,7 +80,7 @@ void setup()
   analogWrite(PIN_LCD_BL, 255);
   //bl.attach(PIN_LCD_BL);
   //bl.write(1000);
-  
+
   // Check to see if unlock circuit is hooked up
   int key1 = analogRead(PIN_LOCK_1);
   int key2 = analogRead(PIN_LOCK_2);
@@ -117,6 +126,8 @@ void setup()
 
   EEPROM.write(EEPROM_ATTEMPTS, attempts);
 
+  EEPROM_readAnything(EEPROM_LOCATION, loc);
+
   // Display 'Welcome'
   setLcd("    Welcome!    ", "");
   lcd.print("Attempt ");
@@ -135,6 +146,36 @@ void loop()
 {
   dots.tick();
 
+  if(!setLoc && analogRead(PIN_SET_LOCATION) > 400)
+  {
+    lcd.clear();
+
+    lcd.setCursor(0, 0);
+    lcd.print("CURR ");
+    lcd.print(loc.lat, 10);
+
+    lcd.setCursor(0, 1);
+    lcd.print("ENT  ");
+    lcd.print(loc.lon, 10);
+
+    delay(5000);
+
+    lcd.setCursor(0, 0);
+    lcd.print("SET  ");
+    lcd.setCursor(0, 1);
+    lcd.print("NEW? ");
+
+    delay(100);
+
+    while(analogRead(PIN_SET_LOCATION) < 400)
+    {
+      delay(1);
+    }
+    
+    setLoc = true;
+    setLcd("Searching for", "signal");
+  }
+
   // Pump serial data into TinyGPS
   if(Serial.available() && gps.encode(Serial.read()))
   {
@@ -147,9 +188,31 @@ void loop()
     if(age != TinyGPS::GPS_INVALID_AGE)
     {
       dots.running(false);
+      
+      if(setLoc)
+      {
+        loc.lat = lat;
+        loc.lon = lon;
+        
+        lcd.clear();
+
+        lcd.setCursor(0, 0);
+        lcd.print("NEW  ");
+        lcd.print(loc.lat, 10);
+    
+        lcd.setCursor(0, 1);
+        lcd.print("LOC  ");
+        lcd.print(loc.lon, 10);
+        
+        delay(10000);
+        
+        EEPROM_writeAnything(EEPROM_LOCATION, loc);
+        
+        digitalWrite(PIN_SHUTDOWN, HIGH);
+      }
 
       // Calculate distance from here to target
-      float distance = TinyGPS::distance_between(lat, lon, LOCATION_LAT, LOCATION_LONG);
+      float distance = TinyGPS::distance_between(lat, lon, loc.lat, loc.lon);
 
       if(distance <= LOCATION_TOLERANCE)
       {
@@ -209,6 +272,7 @@ bool within(int val, int target, int tolerance)
 {
   return val < target + tolerance && val > target - tolerance;
 }
+
 
 
 
